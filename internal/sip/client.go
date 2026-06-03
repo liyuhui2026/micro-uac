@@ -138,6 +138,9 @@ func (c *Client) Dial(ctx context.Context, req domain.CallRequest, offer sdp.Off
 	if err != nil {
 		return nil, fmt.Errorf("send invite: %w", err)
 	}
+	// Some PBXes advertise an unreachable Contact while responding from a reachable
+	// address. Reuse the response source for in-dialog requests like ACK/BYE.
+	session.UA.RewriteContact = true
 	if err := session.WaitAnswer(ctx, sipgo.AnswerOptions{
 		OnResponse: func(res *siplib.Response) error {
 			c.logResponse("inbound SIP response", res)
@@ -162,7 +165,14 @@ func (c *Client) Dial(ctx context.Context, req domain.CallRequest, offer sdp.Off
 	if err := session.Ack(ctx); err != nil {
 		return nil, fmt.Errorf("send ack: %w", err)
 	}
-	c.logger.Info().Msg("outbound ACK sent")
+	contactValue := ""
+	if contact := session.InviteResponse.Contact(); contact != nil {
+		contactValue = contact.Value()
+	}
+	c.logger.Info().
+		Str("response_source", session.InviteResponse.Source()).
+		Str("response_contact", contactValue).
+		Msg("outbound ACK sent")
 
 	callIDHeader := session.InviteResponse.CallID()
 	sipCallID := ""
