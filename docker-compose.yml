@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  micro-uac:
+    image: micro-uac:latest
+    container_name: micro-uac
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./.runtime:/app/.runtime
+      - ./audio:/app/audio
+      - ./config.json:/app/config.json:ro

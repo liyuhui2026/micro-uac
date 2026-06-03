@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: micro-uac
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: micro-uac
+  template:
+    metadata:
+      labels:
+        app: micro-uac
+    spec:
+      containers:
+        - name: micro-uac
+          image: micro-uac:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - >
+              sed "s|\${POD_IP}|${POD_IP}|g" /app/config-template/config.template.json > /app/config/config.json
+              && exec /app/micro-uac-server -config /app/config/config.json
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - name: http
+              containerPort: 8090
+              protocol: TCP
+            - name: sip-udp
+              containerPort: 5061
+              protocol: UDP
+          volumeMounts:
+            - name: config-template
+              mountPath: /app/config-template
+              readOnly: true
+            - name: config
+              mountPath: /app/config
+            - name: runtime
+              mountPath: /app/.runtime
+          readinessProbe:
+            tcpSocket:
+              port: 8090
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8090
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config-template
+          configMap:
+            name: micro-uac-config
+        - name: config
+          emptyDir: {}
+        - name: runtime
+          emptyDir: {}

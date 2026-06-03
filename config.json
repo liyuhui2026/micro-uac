@@ -1,0 +1,21 @@
+{
+  "sip": {
+    "listen_addr": "0.0.0.0:5061",
+    "external_ip": "10.103.2.34",
+    "user_agent": "micro-uac/1.0"
+  },
+  "fs_addr": "10.103.2.34:5060",
+  "log": {
+    "level": "info",
+    "file": ".runtime/micro-uac.log",
+    "also_stdout": false
+  },
+  "media": {
+    "default_audio_file": "audio/demo.wav",
+    "default_codec": "pcmu",
+    "default_frame_ms": 20
+  },
+  "http": {
+    "listen_addr": "0.0.0.0:8090"
+  }
+}

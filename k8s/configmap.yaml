@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: micro-uac-config
+data:
+  config.template.json: |
+    {
+      "sip": {
+        "listen_addr": "0.0.0.0:5061",
+        "external_ip": "${POD_IP}",
+        "user_agent": "micro-uac/1.0"
+      },
+      "fs_addr": "10.103.2.34:5060",
+      "log": {
+        "level": "info",
+        "file": "/app/.runtime/micro-uac.log",
+        "also_stdout": true
+      },
+      "media": {
+        "default_audio_file": "/app/audio/demo.wav",
+        "default_codec": "pcmu",
+        "default_frame_ms": 20
+      },
+      "http": {
+        "listen_addr": "0.0.0.0:8090"
+      }
+    }
