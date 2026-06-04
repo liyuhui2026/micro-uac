@@ -128,8 +128,18 @@ func (c *Client) Dial(ctx context.Context, req domain.CallRequest, offer sdp.Off
 
 	invite := siplib.NewRequest(siplib.INVITE, requestURI)
 	invite.SetTransport("UDP")
+	invite.SetDestination(req.FSAddr)
 	invite.AppendHeader(siplib.NewHeader("From", withTag(req.From, uuid.NewString())))
-	invite.AppendHeader(siplib.NewHeader("To", req.To))
+	toHeader, err := rewriteTargetHost(req.To, req.FSAddr)
+	if err != nil {
+		return nil, err
+	}
+	targetURI, err := buildTargetURI(req.TargetURI, req.LineAddr)
+	if err != nil {
+		return nil, err
+	}
+	invite.AppendHeader(siplib.NewHeader("To", toHeader))
+	invite.AppendHeader(siplib.NewHeader("X-Sip-Client-Target-Uri", targetURI))
 	invite.AppendHeader(siplib.NewHeader("Content-Type", "application/sdp"))
 	invite.SetBody([]byte(offer.Body))
 	c.logRequest("outbound INVITE", invite)
@@ -271,6 +281,35 @@ func splitBindHostPort(addr string) (string, int, error) {
 	return host, port, nil
 }
 
+func rewriteTargetHost(toValue, fsAddr string) (string, error) {
+	host, port, err := net.SplitHostPort(fsAddr)
+	if err != nil {
+		return "", fmt.Errorf("parse fs_addr: %w", err)
+	}
+	start := strings.IndexByte(toValue, ':')
+	at := strings.LastIndex(toValue, "@")
+	if start == -1 || at == -1 || at <= start {
+		return "", fmt.Errorf("parse to header: unsupported value %q", toValue)
+	}
+	suffixIdx := strings.IndexAny(toValue[at:], ">;")
+	if suffixIdx == -1 {
+		return toValue[:at+1] + net.JoinHostPort(host, port), nil
+	}
+	suffixIdx += at
+	return toValue[:at+1] + net.JoinHostPort(host, port) + toValue[suffixIdx:], nil
+}
+
+func buildTargetURI(targetURI, lineAddr string) (string, error) {
+	var uri siplib.Uri
+	if err := siplib.ParseUri(targetURI, &uri); err != nil {
+		return "", fmt.Errorf("parse target_uri: %w", err)
+	}
+	if uri.User == "" {
+		return "", fmt.Errorf("parse target_uri: missing destination number in %q", targetURI)
+	}
+	return "sip:" + uri.User + "@" + lineAddr, nil
+}
+
 func withTag(value, tag string) string {
 	if strings.Contains(strings.ToLower(value), ";tag=") {
 		return value
@@ -306,7 +345,6 @@ func waitForSIPListener(ua *sipgo.UserAgent, localAddr string) error {
 	}
 	return fmt.Errorf("sip listener not ready for %s", localAddr)
 }
-
 
 func (c *Client) logRequest(message string, req *siplib.Request) {
 	if req == nil {

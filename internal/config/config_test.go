@@ -39,6 +39,7 @@ func TestLoadJSONConfig(t *testing.T) {
 			"external_ip": "203.0.113.10",
 			"user_agent": "test-uac/1.0"
 		},
+		"fs_addr": "198.51.100.20:5080",
 		"log": {
 			"level": "debug",
 			"file": "logs/test.log",
@@ -64,6 +65,9 @@ func TestLoadJSONConfig(t *testing.T) {
 
 	if cfg.SIP.ExternalIP != "203.0.113.10" {
 		t.Fatalf("unexpected external ip: %s", cfg.SIP.ExternalIP)
+	}
+	if cfg.FSAddr != "198.51.100.20:5080" {
+		t.Fatalf("unexpected fs addr: %s", cfg.FSAddr)
 	}
 	if cfg.Media.DefaultCodec != "pcma" {
 		t.Fatalf("unexpected codec: %s", cfg.Media.DefaultCodec)

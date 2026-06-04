@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 golang:1.26 AS builder
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/golang:1.26 AS builder
 
 WORKDIR /src
 
@@ -11,19 +11,27 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/micro-uac-server ./cmd/server
 
-FROM --platform=linux/amd64 debian:bookworm-slim
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/debian:bookworm-slim
 
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        iproute2 \
+        lsof \
+        net-tools \
+        procps \
+        python3 \
+        vim \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /app/.runtime /app/audio /app/scripts
 
 COPY --from=builder /out/micro-uac-server /app/micro-uac-server
 COPY config.json /app/config.json
-COPY audio/demo.wav /app/audio/demo.wav
-COPY scripts/create_call.py /app/scripts/create_call.py
+COPY audio/ /app/audio/
+COPY scripts/ /app/scripts/
+RUN chmod +x /app/scripts/create_call.py
 
 EXPOSE 5061/udp
 EXPOSE 8090/tcp

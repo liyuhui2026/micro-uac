@@ -18,6 +18,9 @@ func main() {
 		from       = flag.String("from", "", "SIP From user or URI")
 		to         = flag.String("to", "", "SIP To user or URI")
 		requestURI = flag.String("request-uri", "", "destination SIP request URI")
+		fsAddr     = flag.String("fs-addr", "", "destination SIP socket address in ip:port format")
+		lineAddr   = flag.String("line-addr", "", "line address in ip:port format for X-Sip-Client-Target-Uri")
+		targetURI  = flag.String("target-uri", "", "SIP URI whose user part is used for X-Sip-Client-Target-Uri")
 		audioFile  = flag.String("audio-file", "", "path to local WAV or PCM audio file")
 		codec      = flag.String("codec", "", "audio codec: pcmu or pcma")
 		frameMS    = flag.Int("frame-ms", 0, "RTP frame duration in milliseconds")
@@ -38,6 +41,9 @@ func main() {
 		From:       *from,
 		To:         *to,
 		RequestURI: *requestURI,
+		FSAddr:     *fsAddr,
+		LineAddr:   *lineAddr,
+		TargetURI:  *targetURI,
 		AudioFile:  *audioFile,
 	}
 	if *codec != "" {

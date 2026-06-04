@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -64,6 +65,9 @@ func (c *Caller) Dial(ctx context.Context, req domain.CallRequest) (domain.CallR
 		Str("from", req.From).
 		Str("to", req.To).
 		Str("request_uri", req.RequestURI).
+		Str("fs_addr", req.FSAddr).
+		Str("line_addr", req.LineAddr).
+		Str("target_uri", req.TargetURI).
 		Str("audio_file", req.AudioFile).
 		Str("codec", string(req.Codec)).
 		Int("frame_ms", req.FrameMS).
@@ -160,6 +164,28 @@ func (c *Caller) normalize(req domain.CallRequest) (domain.CallRequest, error) {
 	if req.From == "" || req.To == "" || req.RequestURI == "" {
 		return req, errors.New("from, to and request_uri are required")
 	}
+	if req.FSAddr == "" {
+		req.FSAddr = c.cfg.FSAddr
+	}
+	if _, _, err := net.SplitHostPort(req.FSAddr); err != nil {
+		return req, fmt.Errorf("parse fs_addr: %w", err)
+	}
+	if req.LineAddr == "" {
+		lineAddr, err := requestURIHostPort(req.RequestURI)
+		if err != nil {
+			return req, err
+		}
+		req.LineAddr = lineAddr
+	}
+	if _, _, err := net.SplitHostPort(req.LineAddr); err != nil {
+		return req, fmt.Errorf("parse line_addr: %w", err)
+	}
+	if req.TargetURI == "" {
+		req.TargetURI = req.RequestURI
+	}
+	if !strings.HasPrefix(strings.ToLower(req.TargetURI), "sip:") {
+		return req, errors.New("target_uri must be a sip URI")
+	}
 	if req.AudioFile == "" {
 		req.AudioFile = c.cfg.Media.DefaultAudioFile
 	}
@@ -180,6 +206,20 @@ func (c *Caller) normalize(req domain.CallRequest) (domain.CallRequest, error) {
 		return req, errors.New("frame_ms must be greater than 0")
 	}
 	return req, nil
+}
+
+func requestURIHostPort(raw string) (string, error) {
+	if !strings.HasPrefix(strings.ToLower(raw), "sip:") {
+		return "", errors.New("request_uri must be a sip URI")
+	}
+	parts := strings.SplitN(raw[4:], "@", 2)
+	if len(parts) != 2 || parts[1] == "" {
+		return "", errors.New("request_uri must include host:port")
+	}
+	if _, _, err := net.SplitHostPort(parts[1]); err != nil {
+		return "", fmt.Errorf("parse request_uri host:port: %w", err)
+	}
+	return parts[1], nil
 }
 
 func (c *Caller) fail(result domain.CallResult, logger zerolog.Logger, err error) (domain.CallResult, error) {

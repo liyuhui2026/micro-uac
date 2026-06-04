@@ -49,6 +49,9 @@ type CallRequest struct {
 	From       string `json:"from"`
 	To         string `json:"to"`
 	RequestURI string `json:"request_uri"`
+	FSAddr     string `json:"fs_addr,omitempty"`
+	LineAddr   string `json:"line_addr,omitempty"`
+	TargetURI  string `json:"target_uri,omitempty"`
 	AudioFile  string `json:"audio_file"`
 	Codec      Codec  `json:"codec"`
 	FrameMS    int    `json:"frame_ms"`

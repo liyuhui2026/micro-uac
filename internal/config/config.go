@@ -14,6 +14,7 @@ import (
 
 type Config struct {
 	SIP   SIPConfig   `json:"sip"`
+	FSAddr string     `json:"fs_addr"`
 	Log   LogConfig   `json:"log"`
 	Media MediaConfig `json:"media"`
 	HTTP  HTTPConfig  `json:"http"`
@@ -48,6 +49,7 @@ func Default() Config {
 			ExternalIP: "127.0.0.1",
 			UserAgent:  "micro-uac/1.0",
 		},
+		FSAddr: "127.0.0.1:5060",
 		Log: LogConfig{
 			Level: "info",
 			File:  ".runtime/micro-uac.log",
@@ -98,6 +100,9 @@ func (c Config) Validate() error {
 	if c.Log.File == "" {
 		return errors.New("log.file is required")
 	}
+	if _, _, err := splitHostPort(c.FSAddr); err != nil {
+		return fmt.Errorf("parse fs_addr: %w", err)
+	}
 	if err := c.Media.DefaultCodec.Canonical().Validate(); err != nil {
 		return fmt.Errorf("media.default_codec: %w", err)
 	}
@@ -117,7 +122,7 @@ func (c Config) ResolveLogPath() string {
 func splitHostPort(addr string) (string, string, error) {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		return "", "", fmt.Errorf("parse sip.listen_addr: %w", err)
+		return "", "", err
 	}
 	return host, port, nil
 }

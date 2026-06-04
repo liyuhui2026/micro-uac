@@ -12,17 +12,19 @@ spec:
       labels:
         app: micro-uac
     spec:
+      imagePullSecrets:
+        - name: imagepullsecret-rte-sec
       containers:
         - name: micro-uac
-          image: micro-uac:latest
+          image: hub-master.agoralab.co/rte-serverless/micro-uac:1.0.3
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
             - -c
           args:
             - >
-              sed "s|\${POD_IP}|${POD_IP}|g" /app/config-template/config.template.json > /app/config/config.json
-              && exec /app/micro-uac-server -config /app/config/config.json
+              sed "s|\${POD_IP}|${POD_IP}|g" /app/config-template/config.template.json > /app/config.json
+              && exec /app/micro-uac-server -config /app/config.json
           env:
             - name: POD_IP
               valueFrom:
@@ -35,12 +37,17 @@ spec:
             - name: sip-udp
               containerPort: 5061
               protocol: UDP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           volumeMounts:
             - name: config-template
               mountPath: /app/config-template
               readOnly: true
-            - name: config
-              mountPath: /app/config
             - name: runtime
               mountPath: /app/.runtime
           readinessProbe:
@@ -57,7 +64,13 @@ spec:
         - name: config-template
           configMap:
             name: micro-uac-config
-        - name: config
-          emptyDir: {}
         - name: runtime
           emptyDir: {}
+
+
+python3 create_call.py \
+    --from-number 1010 \
+    --to-number 9200711 \
+    --target-number 13729020276 \
+    --fs-addr 10.167.128.24:5060 \
+    --line-addr icc.icsoc.net:5066
